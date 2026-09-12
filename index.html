@@ -14,11 +14,23 @@
 </head>
 <body>
 
+<!-- Preloader -->
+<div id="preloader" aria-hidden="true">
+  <div class="preloader-badge">
+    <img src="assets/logo.png" alt="">
+  </div>
+  <div class="preloader-bar"><span id="preloader-fill"></span></div>
+  <p class="preloader-label">Entering the forge</p>
+</div>
+
 <!-- Fixed ember particle field, sits behind everything -->
 <canvas id="ember-field"></canvas>
 
 <!-- Custom cursor -->
 <div id="cursor-glow" aria-hidden="true"></div>
+
+<!-- Full-screen flash used for high-impact moments (hero blade swing) -->
+<div id="screen-flash" aria-hidden="true"></div>
 
 <!-- ============ NAV ============ -->
 <header class="site-header" id="site-header">
