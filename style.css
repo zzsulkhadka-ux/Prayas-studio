@@ -1,856 +1,627 @@
-/* ============================================================
-   PRAYAS STUDIO — Stylesheet
-   Palette: void black, chrome silver, ember red
-   Type: Cinzel (display) + Inter (body/UI)
-   ============================================================ */
+/* ==========================================================
+   PRAYAS STUDIO — script.js
+   Sections:
+   1. Utilities
+   2. Header / mobile nav
+   3. Custom cursor
+   4. Scroll reveal (blade-wipe on headings)
+   5. Global ember particle background (Canvas 2D)
+   6. Hero 3D blade scene (Three.js)
+   7. Contact form (front-end only)
+   ========================================================== */
 
-:root{
-  --void:        #07080a;
-  --void-soft:   #0c0d10;
-  --panel:       #111318;
-  --panel-line:  #23262d;
-  --ember:       #c41e2e;
-  --ember-bright:#ff3b3b;
-  --chrome:      #d9dde3;
-  --chrome-dim:  #a7abb3;
-  --ash:         #8a8e96;
-  --paper:       #f3f1ec;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isCoarsePointer = window.matchMedia('(hover: none)').matches;
 
-  --font-display: 'Cinzel', 'Times New Roman', serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+/* ---------------- Shared state ---------------- */
+window.__prayasPreloaderDone = prefersReducedMotion; // if reduced motion, treat as already done
 
-  --container: 1180px;
-  --gutter: clamp(1.25rem, 4vw, 3rem);
+/* ---------------- 0. Preloader ---------------- */
+(function preloader(){
+  const pre = document.getElementById('preloader');
+  if (!pre) { window.__prayasPreloaderDone = true; return; }
 
-  --ease: cubic-bezier(.22,.9,.3,1);
-}
+  const hide = () => {
+    pre.classList.add('is-hidden');
+    window.__prayasPreloaderDone = true;
+  };
 
-*, *::before, *::after{ box-sizing: border-box; }
+  const minTime = new Promise(res => setTimeout(res, prefersReducedMotion ? 200 : 1500));
+  const loaded = new Promise(res => {
+    if (document.readyState === 'complete') res();
+    else window.addEventListener('load', res, { once: true });
+  });
 
-html{
-  scroll-behavior: smooth;
-  scroll-padding-top: 88px;
-}
+  Promise.all([minTime, loaded]).then(hide);
+  // safety fallback in case something hangs
+  setTimeout(hide, 4000);
+})();
 
-body{
-  margin:0;
-  background: var(--void);
-  color: var(--chrome);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-  cursor: none;
-}
+/* ---------------- 1. Utilities ---------------- */
+function lerp(a, b, t){ return a + (b - a) * t; }
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
-@media (max-width: 860px), (hover: none){
-  body{ cursor: auto; }
-  #cursor-glow{ display:none; }
-}
+function spawnClickBurst(x, y, big){
+  if (prefersReducedMotion) return;
 
-img{ max-width:100%; display:block; }
-a{ color:inherit; text-decoration:none; }
-ul{ list-style:none; margin:0; padding:0; }
-button{ font-family:inherit; }
+  const ring = document.createElement('div');
+  ring.className = 'click-fx';
+  ring.style.left = x + 'px';
+  ring.style.top = y + 'px';
+  document.body.appendChild(ring);
+  ring.addEventListener('animationend', () => ring.remove());
 
-::selection{ background: var(--ember); color: var(--paper); }
-
-h1,h2,h3{
-  font-family: var(--font-display);
-  color: var(--paper);
-  font-weight: 600;
-  line-height: 1.15;
-  margin: 0;
-  letter-spacing: 0.01em;
-}
-
-p{ margin: 0 0 1em; color: var(--ash); max-width: 62ch; }
-p:last-child{ margin-bottom:0; }
-
-.section-inner{
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: clamp(4rem, 10vw, 7rem) var(--gutter);
-}
-
-.section-label{
-  font-size: 0.8rem;
-  color: var(--ember-bright);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  margin: 0 0 0.9rem;
-}
-
-.section-heading{
-  font-size: clamp(1.9rem, 4vw, 2.9rem);
-  max-width: 16ch;
-}
-
-.lead{
-  font-size: 1.1rem;
-  color: var(--chrome-dim);
-  max-width: 46ch;
-  margin-top: 1.4rem;
-}
-
-/* reveal-on-scroll: a blade-wipe clip reveal, used only on headings */
-[data-reveal]{
-  display:inline-block;
-  clip-path: inset(0 100% 0 0);
-  transition: clip-path 0.9s var(--ease);
-}
-[data-reveal].in-view{
-  clip-path: inset(0 0 0 0);
-}
-@media (prefers-reduced-motion: reduce){
-  [data-reveal]{ clip-path: none; transition:none; }
-}
-
-/* ============ BUTTONS ============ */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding: 0.85rem 1.6rem;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  transition: transform 0.25s var(--ease), background 0.25s var(--ease), border-color 0.25s var(--ease), color 0.25s var(--ease);
-  will-change: transform;
-}
-.btn-primary{
-  background: var(--ember);
-  color: var(--paper);
-  box-shadow: 0 0 0 0 rgba(196,30,46,0);
-}
-.btn-primary:hover{
-  background: var(--ember-bright);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px -8px rgba(255,59,59,0.55);
-}
-.btn-outline{
-  border-color: var(--panel-line);
-  color: var(--chrome);
-}
-.btn-outline:hover{
-  border-color: var(--ember-bright);
-  color: var(--paper);
-  transform: translateY(-2px);
-}
-.btn-ghost{
-  color: var(--chrome);
-  padding: 0.6rem 1.2rem;
-  border: 1px solid var(--panel-line);
-}
-.btn-ghost:hover{
-  border-color: var(--ember-bright);
-  color: var(--paper);
-}
-
-/* ============ FIXED BACKGROUND CANVAS ============ */
-#ember-field{
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.55;
-}
-
-/* ============ CUSTOM CURSOR ============ */
-#cursor-glow{
-  position: fixed;
-  top:0; left:0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,59,59,0.6);
-  box-shadow: 0 0 18px 2px rgba(196,30,46,0.35);
-  pointer-events: none;
-  z-index: 999;
-  transform: translate(-50%,-50%);
-  transition: width 0.2s var(--ease), height 0.2s var(--ease), background 0.2s var(--ease);
-}
-#cursor-glow.is-active{
-  width: 46px;
-  height: 46px;
-  background: rgba(196,30,46,0.12);
-}
-
-/* ============ HEADER / NAV ============ */
-.site-header{
-  position: fixed;
-  top:0; left:0; right:0;
-  z-index: 100;
-  background: linear-gradient(to bottom, rgba(7,8,10,0.85), rgba(7,8,10,0));
-  backdrop-filter: blur(6px);
-  transition: background 0.3s ease, border-color 0.3s ease;
-  border-bottom: 1px solid transparent;
-}
-.site-header.scrolled{
-  background: rgba(7,8,10,0.92);
-  border-bottom-color: var(--panel-line);
-}
-.header-inner{
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: 0.9rem var(--gutter);
-  display:flex;
-  align-items:center;
-  gap: 2rem;
-}
-.brand{
-  display:flex;
-  align-items:center;
-  gap: 0.7rem;
-  margin-right: auto;
-}
-.brand-badge{
-  width: 42px;
-  height: 42px;
-  aspect-ratio: 1/1;
-  border-radius: 50%;
-  overflow: hidden;
-  flex: none;
-  background: #000;
-}
-.brand-badge--sm{ width: 36px; height:36px; }
-.brand-logo{
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.brand-word{
-  display:flex;
-  flex-direction: column;
-  line-height: 1;
-}
-.brand-name{
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  color: var(--paper);
-  letter-spacing: 0.04em;
-}
-.brand-sub{
-  font-size: 0.62rem;
-  color: var(--ember-bright);
-  letter-spacing: 0.18em;
-  margin-top: 3px;
-}
-.main-nav{
-  display:flex;
-  gap: 1.8rem;
-}
-.main-nav a{
-  font-size: 0.92rem;
-  color: var(--chrome-dim);
-  position: relative;
-  padding: 0.3rem 0;
-  transition: color 0.2s ease;
-}
-.main-nav a::after{
-  content:'';
-  position:absolute;
-  left:0; right:100%;
-  bottom:0;
-  height:1px;
-  background: var(--ember-bright);
-  transition: right 0.3s var(--ease);
-}
-.main-nav a:hover{ color: var(--paper); }
-.main-nav a:hover::after{ right:0; }
-
-.nav-cta{ flex: none; }
-
-.nav-toggle{
-  display:none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 32px;
-  height: 32px;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.nav-toggle span{
-  display:block;
-  height: 2px;
-  background: var(--chrome);
-  transition: transform 0.3s var(--ease), opacity 0.3s var(--ease);
-}
-.nav-toggle[aria-expanded="true"] span:nth-child(1){ transform: translateY(7px) rotate(45deg); }
-.nav-toggle[aria-expanded="true"] span:nth-child(2){ opacity: 0; }
-.nav-toggle[aria-expanded="true"] span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
-
-/* ============ HERO ============ */
-.hero{
-  position: relative;
-  min-height: 100vh;
-  display:flex;
-  align-items:center;
-  overflow: hidden;
-  padding-top: 80px;
-}
-#hero-canvas{
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-.hero-vignette{
-  position:absolute;
-  inset:0;
-  z-index: 2;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(7,8,10,0) 0%, rgba(7,8,10,0.55) 65%, rgba(7,8,10,0.95) 100%),
-    linear-gradient(to bottom, rgba(7,8,10,0.2), rgba(7,8,10,0.85) 100%);
-  pointer-events: none;
-}
-.hero-content{
-  position: relative;
-  z-index: 3;
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
-  width: 100%;
-}
-.hero-kicker{
-  font-size: 0.8rem;
-  color: var(--ember-bright);
-  letter-spacing: 0.08em;
-  margin-bottom: 1.2rem;
-}
-.hero-title{
-  font-size: clamp(2.6rem, 7vw, 5.2rem);
-  color: var(--paper);
-  max-width: 14ch;
-}
-.hero-title .line{ display:block; }
-.hero-title em{
-  font-style: normal;
-  color: var(--ember-bright);
-  text-shadow: 0 0 40px rgba(255,59,59,0.45);
-}
-.hero-copy{
-  margin-top: 1.6rem;
-  font-size: 1.1rem;
-  max-width: 46ch;
-  color: var(--chrome-dim);
-}
-.hero-actions{
-  margin-top: 2.2rem;
-  display:flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.scroll-cue{
-  position: absolute;
-  bottom: 2.2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  display:flex;
-  flex-direction: column;
-  align-items:center;
-  gap: 0.5rem;
-}
-.scroll-cue span{
-  width: 1px;
-  height: 34px;
-  background: linear-gradient(to bottom, transparent, var(--ember-bright));
-  animation: scrollcue 1.8s ease-in-out infinite;
-}
-.scroll-cue p{
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
-  color: var(--ash);
-  margin:0;
-}
-@keyframes scrollcue{
-  0%{ transform: scaleY(0); transform-origin: top; opacity: 0; }
-  40%{ transform: scaleY(1); transform-origin: top; opacity:1; }
-  60%{ transform: scaleY(1); transform-origin: bottom; opacity:1;}
-  100%{ transform: scaleY(0); transform-origin: bottom; opacity: 0; }
-}
-
-/* ============ ABOUT ============ */
-.about{ position: relative; z-index: 2; background: var(--void); }
-.about-grid{
-  display:grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: clamp(2.5rem, 6vw, 5rem);
-  align-items:center;
-}
-.pillars{ margin-top: 2rem; display:flex; flex-direction: column; gap: 0.9rem; }
-.pillars li{
-  color: var(--chrome-dim);
-  font-size: 0.98rem;
-  display:flex;
-  align-items:flex-start;
-  gap: 0.7rem;
-}
-.pillars strong{ color: var(--paper); font-weight:600; }
-.pillar-dot{
-  width: 6px; height:6px;
-  border-radius:50%;
-  background: var(--ember-bright);
-  margin-top: 0.55em;
-  flex: none;
-  box-shadow: 0 0 8px 1px rgba(255,59,59,0.7);
-}
-
-.about-visual{ display:flex; justify-content:center; }
-.ember-orb{
-  position: relative;
-  width: min(320px, 60vw);
-  aspect-ratio: 1/1;
-  display:flex; align-items:center; justify-content:center;
-}
-.orb-core{
-  width: 42%;
-  height: 42%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff8a6b, var(--ember) 45%, #3a0d12 78%);
-  box-shadow: 0 0 60px 10px rgba(196,30,46,0.55), 0 0 120px 40px rgba(196,30,46,0.25);
-  animation: orbpulse 4.5s ease-in-out infinite;
-}
-.orb-ring{
-  position:absolute;
-  inset:0;
-  border: 1px solid rgba(217,221,227,0.18);
-  border-radius: 50%;
-  animation: spin 18s linear infinite;
-}
-.orb-ring::before{
-  content:'';
-  position:absolute;
-  top:-3px; left: 50%;
-  width:6px; height:6px;
-  border-radius:50%;
-  background: var(--chrome);
-  box-shadow: 0 0 10px 2px rgba(217,221,227,0.7);
-}
-.orb-ring-2{
-  inset: 14%;
-  border-color: rgba(196,30,46,0.35);
-  animation-duration: 12s;
-  animation-direction: reverse;
-}
-@keyframes spin{ to{ transform: rotate(360deg); } }
-@keyframes orbpulse{
-  0%,100%{ transform: scale(1); }
-  50%{ transform: scale(1.08); }
-}
-
-/* ============ SERVICES ============ */
-.services{ position: relative; z-index: 2; background: var(--void-soft); border-top: 1px solid var(--panel-line); border-bottom: 1px solid var(--panel-line); }
-.services-head{ margin-bottom: 3rem; max-width: 60ch; }
-.services-grid{
-  display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--panel-line);
-  border: 1px solid var(--panel-line);
-}
-.service-card{
-  background: var(--void-soft);
-  padding: 2.2rem 2rem;
-  transition: background 0.3s ease;
-  position: relative;
-}
-.service-card--wide{ grid-column: span 2; }
-.service-card::before{
-  content:'';
-  position:absolute;
-  top:0; left:0;
-  width: 0;
-  height: 2px;
-  background: var(--ember-bright);
-  transition: width 0.35s var(--ease);
-}
-.service-card:hover{ background: var(--panel); }
-.service-card:hover::before{ width: 100%; }
-.service-card h3{
-  font-size: 1.15rem;
-  margin-bottom: 0.7rem;
-}
-.service-card p{ font-size: 0.94rem; margin:0; }
-
-/* ============ WORK ============ */
-.work{ position: relative; z-index: 2; background: var(--void); }
-.work-head{ margin-bottom: 3rem; }
-.work-note{ font-size: 0.85rem; color: var(--ash); font-style: italic; }
-.work-grid{
-  display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.4rem;
-}
-.work-card{
-  display:block;
-  position: relative;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--panel-line);
-  transition: transform 0.4s var(--ease), border-color 0.4s ease;
-}
-.work-card:hover{
-  transform: translateY(-6px);
-  border-color: var(--tint, var(--ember-bright));
-}
-.work-thumb{
-  aspect-ratio: 4/3;
-  background:
-    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--tint,#c41e2e) 55%, transparent), transparent 60%),
-    linear-gradient(155deg, #14161b, #0a0b0d 70%);
-  position: relative;
-  overflow:hidden;
-}
-.work-thumb::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  background: repeating-linear-gradient(115deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 8px);
-  mix-blend-mode: overlay;
-}
-.work-card:hover .work-thumb::after{ opacity: 0.6; }
-.work-meta{
-  display:flex;
-  justify-content: space-between;
-  align-items:baseline;
-  padding: 1rem 1.1rem;
-  background: var(--panel);
-}
-.work-meta h3{
-  font-size: 1rem;
-  font-family: var(--font-body);
-  font-weight: 600;
-  color: var(--paper);
-}
-.work-meta span{
-  font-size: 0.78rem;
-  color: var(--ash);
-}
-
-/* ============ MARQUEE ============ */
-.marquee{
-  position: relative;
-  z-index: 2;
-  overflow: hidden;
-  background: var(--ember);
-  padding: 0.9rem 0;
-  border-top: 1px solid rgba(0,0,0,0.2);
-  border-bottom: 1px solid rgba(0,0,0,0.2);
-}
-.marquee-track{
-  display:flex;
-  gap: 0.9rem;
-  white-space: nowrap;
-  width: max-content;
-  animation: marquee 26s linear infinite;
-}
-.marquee-track span{
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  letter-spacing: 0.05em;
-  color: rgba(7,8,10,0.9);
-}
-@keyframes marquee{
-  from{ transform: translateX(0); }
-  to{ transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce){
-  .marquee-track{ animation: none; }
-}
-
-/* ============ CONTACT ============ */
-.contact{ position: relative; z-index: 2; background: var(--void); }
-.contact-grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(2.5rem, 6vw, 5rem);
-}
-.contact-details{
-  margin-top: 2.2rem;
-  display:flex;
-  flex-direction: column;
-  gap: 1.2rem;
-}
-.contact-details > a{
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  color: var(--paper);
-  width: fit-content;
-  border-bottom: 1px solid var(--panel-line);
-  padding-bottom: 0.3rem;
-  transition: border-color 0.25s ease, color 0.25s ease;
-}
-.contact-details > a:hover{ color: var(--ember-bright); border-color: var(--ember-bright); }
-.socials{ display:flex; gap: 1.4rem; }
-.socials a{
-  font-size: 0.88rem;
-  color: var(--ash);
-  transition: color 0.2s ease;
-}
-.socials a:hover{ color: var(--paper); }
-
-.contact-form{
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  border-radius: 4px;
-  padding: clamp(1.6rem, 4vw, 2.4rem);
-  display:flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  position: relative;
-}
-.form-row{ display:flex; flex-direction: column; gap: 0.5rem; }
-.form-row label{
-  font-size: 0.8rem;
-  color: var(--ash);
-  letter-spacing: 0.02em;
-}
-.form-row input,
-.form-row select,
-.form-row textarea{
-  background: var(--void-soft);
-  border: 1px solid var(--panel-line);
-  color: var(--paper);
-  padding: 0.75rem 0.9rem;
-  border-radius: 3px;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  resize: vertical;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.form-row input:focus,
-.form-row select:focus,
-.form-row textarea:focus{
-  outline: none;
-  border-color: var(--ember-bright);
-  box-shadow: 0 0 0 3px rgba(255,59,59,0.15);
-}
-.form-submit{ margin-top: 0.4rem; }
-.form-note{
-  font-size: 0.85rem;
-  color: var(--ember-bright);
-  min-height: 1.2em;
-  margin:0;
-}
-
-/* ============ FOOTER ============ */
-.site-footer{
-  position: relative;
-  z-index: 2;
-  background: var(--void-soft);
-  border-top: 1px solid var(--panel-line);
-  padding: 2.6rem var(--gutter) 1.6rem;
-}
-.footer-inner{
-  max-width: var(--container);
-  margin: 0 auto;
-  display:flex;
-  align-items:center;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  justify-content: space-between;
-}
-.footer-nav{ display:flex; gap: 1.5rem; }
-.footer-nav a{ font-size: 0.88rem; color: var(--ash); transition: color 0.2s ease; }
-.footer-nav a:hover{ color: var(--paper); }
-.footer-tagline{
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
-  color: var(--ash);
-  margin:0;
-}
-.footer-copy{
-  max-width: var(--container);
-  margin: 1.6rem auto 0;
-  padding-top: 1.4rem;
-  border-top: 1px solid var(--panel-line);
-  font-size: 0.78rem;
-  color: #5c5f66;
-  text-align:center;
-}
-
-/* ============ PRELOADER ============ */
-#preloader{
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: var(--void);
-  display:flex;
-  flex-direction: column;
-  align-items:center;
-  justify-content:center;
-  gap: 1.4rem;
-  transition: opacity 0.7s var(--ease), visibility 0.7s var(--ease);
-}
-#preloader.is-hidden{
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.preloader-badge{
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  overflow: hidden;
-  background:#000;
-  box-shadow: 0 0 40px 6px rgba(196,30,46,0.45);
-  animation: preloaderPulse 1.6s ease-in-out infinite;
-}
-.preloader-badge img{ width:100%; height:100%; object-fit:contain; }
-@keyframes preloaderPulse{
-  0%,100%{ transform: scale(1); box-shadow: 0 0 40px 6px rgba(196,30,46,0.35); }
-  50%{ transform: scale(1.07); box-shadow: 0 0 60px 14px rgba(255,59,59,0.55); }
-}
-.preloader-bar{
-  width: 180px;
-  height: 2px;
-  background: var(--panel-line);
-  overflow: hidden;
-  border-radius: 2px;
-}
-.preloader-bar span{
-  display:block;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--ember), var(--ember-bright));
-  animation: preloaderFill 1.5s var(--ease) forwards;
-}
-@keyframes preloaderFill{ to{ width: 100%; } }
-.preloader-label{
-  font-size: 0.72rem;
-  letter-spacing: 0.22em;
-  color: var(--ash);
-  margin:0;
-  text-transform: uppercase;
-}
-@media (prefers-reduced-motion: reduce){
-  .preloader-badge{ animation: none; }
-  .preloader-bar span{ animation-duration: 0.4s; }
-}
-
-/* ============ CLICK BURST / SHOCKWAVE ============ */
-.click-fx{
-  position: fixed;
-  z-index: 998;
-  left: 0; top: 0;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  border: 1px solid rgba(255,59,59,0.85);
-  box-shadow: 0 0 20px 4px rgba(255,59,59,0.4);
-  animation: clickRing 0.6s var(--ease) forwards;
-}
-.click-fx--outer{
-  border-color: rgba(217,221,227,0.5);
-  box-shadow: 0 0 30px 6px rgba(217,221,227,0.2);
-  animation: clickRingOuter 0.9s var(--ease) forwards;
-}
-@keyframes clickRing{
-  from{ width: 10px; height: 10px; opacity: 1; }
-  to{ width: 90px; height: 90px; opacity: 0; }
-}
-@keyframes clickRingOuter{
-  from{ width: 10px; height: 10px; opacity: 0.8; }
-  to{ width: 220px; height: 220px; opacity: 0; }
-}
-.spark{
-  position: fixed;
-  z-index: 998;
-  left: 0; top: 0;
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--ember-bright);
-  box-shadow: 0 0 8px 2px rgba(255,59,59,0.8);
-  pointer-events: none;
-  animation: sparkFly 0.7s ease-out forwards;
-}
-@keyframes sparkFly{
-  from{ transform: translate(-50%,-50%) translate(0,0); opacity: 1; }
-  to{ transform: translate(-50%,-50%) translate(var(--dx), var(--dy)); opacity: 0; }
-}
-
-/* ============ SCREEN FLASH ============ */
-#screen-flash{
-  position: fixed;
-  inset: 0;
-  z-index: 997;
-  background: radial-gradient(circle at 50% 45%, rgba(255,59,59,0.35), transparent 65%);
-  opacity: 0;
-  pointer-events: none;
-}
-#screen-flash.flash{
-  animation: screenFlash 0.5s ease-out;
-}
-@keyframes screenFlash{
-  0%{ opacity: 0.9; }
-  100%{ opacity: 0; }
-}
-
-/* ============ 3D TILT CARDS ============ */
-.service-card, .work-card{
-  transform-style: preserve-3d;
-  transition: transform 0.15s ease-out, background 0.3s ease, border-color 0.4s ease;
-  will-change: transform;
-}
-.work-card{ transition: transform 0.15s ease-out, border-color 0.4s ease; }
-.service-card::after, .work-card::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.08), transparent 55%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.service-card:hover::after, .work-card:hover::after{ opacity: 1; }
-
-/* ============ MAGNETIC BUTTONS ============ */
-.btn{ will-change: transform; }
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible{
-  outline: 2px solid var(--ember-bright);
-  outline-offset: 3px;
-}
-
-/* ============ RESPONSIVE ============ */
-@media (max-width: 900px){
-  .about-grid, .contact-grid{ grid-template-columns: 1fr; }
-  .about-visual{ order:-1; margin-bottom: 1rem; }
-  .services-grid{ grid-template-columns: repeat(2,1fr); }
-  .service-card--wide{ grid-column: span 2; }
-  .work-grid{ grid-template-columns: repeat(2,1fr); }
-}
-
-@media (max-width: 720px){
-  .main-nav, .nav-cta{ display:none; }
-  .nav-toggle{ display:flex; }
-
-  .main-nav.open{
-    display:flex;
-    position: absolute;
-    top: 100%; left:0; right:0;
-    flex-direction: column;
-    background: rgba(7,8,10,0.97);
-    border-top: 1px solid var(--panel-line);
-    padding: 1.2rem var(--gutter) 1.6rem;
-    gap: 1rem;
+  if (big) {
+    const outer = document.createElement('div');
+    outer.className = 'click-fx click-fx--outer';
+    outer.style.left = x + 'px';
+    outer.style.top = y + 'px';
+    document.body.appendChild(outer);
+    outer.addEventListener('animationend', () => outer.remove());
   }
-  .services-grid, .work-grid{ grid-template-columns: 1fr; }
-  .service-card--wide{ grid-column: span 1; }
+
+  const count = big ? 14 : 7;
+  for (let i = 0; i < count; i++) {
+    const spark = document.createElement('span');
+    spark.className = 'spark';
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+    const dist = (big ? 70 : 40) + Math.random() * (big ? 50 : 25);
+    spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    spark.style.left = x + 'px';
+    spark.style.top = y + 'px';
+    document.body.appendChild(spark);
+    spark.addEventListener('animationend', () => spark.remove());
+  }
 }
+
+/* ---------------- 2. Header / mobile nav ---------------- */
+(function headerNav(){
+  const header = document.getElementById('site-header');
+  const toggle = document.getElementById('nav-toggle');
+  const nav = document.getElementById('main-nav');
+
+  const onScroll = () => {
+    header.classList.toggle('scrolled', window.scrollY > 40);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  toggle.addEventListener('click', () => {
+    const isOpen = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  nav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+})();
+
+/* ---------------- 3. Custom cursor ---------------- */
+(function customCursor(){
+  const dot = document.getElementById('cursor-glow');
+  if (!dot || isCoarsePointer) return;
+
+  let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+  let cx = mx, cy = my;
+
+  window.addEventListener('mousemove', (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+  });
+
+  const interactive = 'a, button, input, select, textarea, .work-card, [role="button"]';
+  document.addEventListener('mouseover', (e) => {
+    if (e.target.closest(interactive)) dot.classList.add('is-active');
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest(interactive)) dot.classList.remove('is-active');
+  });
+
+  function tick(){
+    cx = lerp(cx, mx, 0.18);
+    cy = lerp(cy, my, 0.18);
+    dot.style.transform = `translate(${cx}px, ${cy}px) translate(-50%,-50%)`;
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ---------------- 4. Scroll reveal ---------------- */
+(function scrollReveal(){
+  const targets = document.querySelectorAll('[data-reveal]');
+  if (!targets.length) return;
+
+  if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+    targets.forEach(t => t.classList.add('in-view'));
+    return;
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('in-view'), i * 90);
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.4 });
+
+  targets.forEach(t => io.observe(t));
+})();
+
+/* ---------------- 4b. Global click shockwave (outside the hero) ---------------- */
+(function globalClickFx(){
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.hero')) return; // hero handles its own richer burst
+    spawnClickBurst(e.clientX, e.clientY, false);
+    if (window.__prayasEmberBurst) window.__prayasEmberBurst(e.clientX, e.clientY, 26);
+  });
+})();
+
+/* ---------------- 4c. Magnetic buttons ---------------- */
+(function magneticButtons(){
+  if (isCoarsePointer || prefersReducedMotion) return;
+
+  document.querySelectorAll('.btn').forEach(btn => {
+    const strength = 0.3;
+    let raf = null;
+
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const relX = e.clientX - (rect.left + rect.width / 2);
+      const relY = e.clientY - (rect.top + rect.height / 2);
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        btn.style.transform = `translate(${relX * strength}px, ${relY * strength}px)`;
+      });
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      if (raf) cancelAnimationFrame(raf);
+      btn.style.transform = 'translate(0,0)';
+    });
+  });
+})();
+
+/* ---------------- 4d. 3D tilt cards ---------------- */
+(function tiltCards(){
+  if (isCoarsePointer || prefersReducedMotion) return;
+
+  document.querySelectorAll('.service-card, .work-card').forEach(card => {
+    let raf = null;
+
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width;   // 0..1
+      const py = (e.clientY - rect.top) / rect.height;   // 0..1
+      const rotY = (px - 0.5) * 14;
+      const rotX = (0.5 - py) * 14;
+
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-4px)`;
+        card.style.setProperty('--mx', `${px * 100}%`);
+        card.style.setProperty('--my', `${py * 100}%`);
+      });
+    });
+
+    card.addEventListener('mouseleave', () => {
+      if (raf) cancelAnimationFrame(raf);
+      card.style.transform = '';
+    });
+  });
+})();
+
+/* ---------------- 5. Global ember particle background ---------------- */
+(function emberField(){
+  const canvas = document.getElementById('ember-field');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles, running = true;
+
+  const BASE_COUNT = prefersReducedMotion ? 0 : (window.innerWidth < 720 ? 90 : 190);
+
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function makeParticle(randomY){
+    return {
+      x: Math.random() * w,
+      y: randomY ? Math.random() * h : h + Math.random() * 60,
+      r: Math.random() * 2.2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: -(Math.random() * 0.5 + 0.15),
+      hue: Math.random() > 0.3 ? 'ember' : 'chrome',
+      alpha: Math.random() * 0.55 + 0.25,
+      flicker: Math.random() * Math.PI * 2,
+      burst: false
+    };
+  }
+
+  particles = Array.from({ length: BASE_COUNT }, () => makeParticle(true));
+
+  // Called by click handlers anywhere on the page: injects a burst of
+  // fast-moving embers from (x, y) that decay into the normal ambient drift.
+  window.__prayasEmberBurst = function(x, y, count){
+    if (prefersReducedMotion) return;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3.2 + 1.2;
+      particles.push({
+        x, y,
+        r: Math.random() * 2.4 + 0.8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        hue: Math.random() > 0.25 ? 'ember' : 'chrome',
+        alpha: 1,
+        flicker: Math.random() * Math.PI * 2,
+        burst: true
+      });
+    }
+    // keep the array from growing unbounded on rapid clicking
+    if (particles.length > BASE_COUNT + 400) {
+      particles.splice(0, particles.length - (BASE_COUNT + 400));
+    }
+  };
+
+  function draw(){
+    if (!running) { requestAnimationFrame(draw); return; }
+    ctx.clearRect(0, 0, w, h);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.flicker += 0.05;
+
+      if (p.burst) {
+        // fast-decaying burst particle: friction slows it, then it drifts up and fades
+        p.vx *= 0.94;
+        p.vy = p.vy * 0.94 - 0.01;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.012;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < -10) Object.assign(p, makeParticle(false));
+      }
+
+      const flick = 0.7 + Math.sin(p.flicker) * 0.3;
+      const a = Math.max(p.alpha * flick, 0);
+      const core = p.hue === 'ember' ? '255,90,60' : '217,221,227';
+
+      // soft radial glow instead of a flat dot, for a premium bokeh look
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+      glow.addColorStop(0, `rgba(${core}, ${a})`);
+      glow.addColorStop(1, `rgba(${core}, 0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    running = !document.hidden;
+  });
+
+  if (BASE_COUNT > 0 || true) draw(); // keep loop alive so click bursts still render even at 0 ambient particles
+})();
+
+/* ---------------- 6. Hero 3D blade scene (Three.js) ---------------- */
+(function heroScene(){
+  const canvas = document.getElementById('hero-canvas');
+  if (!canvas || typeof THREE === 'undefined') return;
+
+  const heroSection = document.getElementById('home');
+  let width = heroSection.clientWidth;
+  let height = heroSection.clientHeight;
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+  camera.position.set(0, 0.4, 9);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(width, height);
+  renderer.setClearColor(0x000000, 0);
+
+  /* ---- Lighting ---- */
+  scene.add(new THREE.AmbientLight(0x554455, 0.6));
+
+  const emberLight = new THREE.PointLight(0xff3b3b, 6, 14, 2);
+  emberLight.position.set(0, -1.2, 2.5);
+  scene.add(emberLight);
+
+  const rimLight = new THREE.DirectionalLight(0xd9dde3, 1.1);
+  rimLight.position.set(-4, 4, 3);
+  scene.add(rimLight);
+
+  const fillLight = new THREE.DirectionalLight(0x8a8e96, 0.35);
+  fillLight.position.set(3, -2, -3);
+  scene.add(fillLight);
+
+  /* ---- Build the blade ---- */
+  const bladeGroup = new THREE.Group();
+
+  // Blade body: tapered profile via an extruded shape
+  const bladeShape = new THREE.Shape();
+  bladeShape.moveTo(-0.42, 0);
+  bladeShape.lineTo(0.42, 0);
+  bladeShape.lineTo(0.24, 3.6);
+  bladeShape.lineTo(0, 4.35);
+  bladeShape.lineTo(-0.24, 3.6);
+  bladeShape.lineTo(-0.42, 0);
+
+  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, {
+    depth: 0.09,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.025,
+    bevelSegments: 2,
+    curveSegments: 8
+  });
+  bladeGeo.center();
+  bladeGeo.translate(0, 0.7, 0);
+
+  const bladeMat = new THREE.MeshStandardMaterial({
+    color: 0xcfd3d9,
+    metalness: 0.92,
+    roughness: 0.22,
+    emissive: 0x220505,
+    emissiveIntensity: 0.4
+  });
+  const blade = new THREE.Mesh(bladeGeo, bladeMat);
+  bladeGroup.add(blade);
+
+  // Glowing ember core line down the center of the blade
+  const coreGeo = new THREE.BoxGeometry(0.05, 3.9, 0.12);
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: 0xff5a3c,
+    emissive: 0xff3b1f,
+    emissiveIntensity: 2.2,
+    roughness: 0.4
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  core.position.set(0, 0.55, 0.02);
+  bladeGroup.add(core);
+
+  // Crossguard
+  const guardGeo = new THREE.BoxGeometry(1.5, 0.16, 0.2);
+  const guardMat = new THREE.MeshStandardMaterial({ color: 0xb9bdc4, metalness: 0.9, roughness: 0.3 });
+  const guard = new THREE.Mesh(guardGeo, guardMat);
+  guard.position.set(0, -1.28, 0);
+  bladeGroup.add(guard);
+
+  // Grip
+  const gripGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.9, 16);
+  const gripMat = new THREE.MeshStandardMaterial({ color: 0x1a1b1e, roughness: 0.8, metalness: 0.1 });
+  const grip = new THREE.Mesh(gripGeo, gripMat);
+  grip.position.set(0, -1.78, 0);
+  bladeGroup.add(grip);
+
+  // Pommel (glowing ember orb)
+  const pommelGeo = new THREE.SphereGeometry(0.2, 24, 24);
+  const pommelMat = new THREE.MeshStandardMaterial({
+    color: 0xff3b3b,
+    emissive: 0xff2020,
+    emissiveIntensity: 1.6,
+    metalness: 0.4,
+    roughness: 0.3
+  });
+  const pommel = new THREE.Mesh(pommelGeo, pommelMat);
+  pommel.position.set(0, -2.32, 0);
+  bladeGroup.add(pommel);
+
+  bladeGroup.rotation.z = 0.04;
+  bladeGroup.scale.setScalar(0.001); // start hidden, animated in on load
+  scene.add(bladeGroup);
+
+  /* ---- Soft glow sprite texture for premium bokeh-style particles ---- */
+  function makeGlowTexture(){
+    const size = 128;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.7)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  const glowTexture = makeGlowTexture();
+
+  /* ---- Ember particles rising around the blade ---- */
+  const PCOUNT = prefersReducedMotion ? 140 : (window.innerWidth < 720 ? 380 : 850);
+  const positions = new Float32Array(PCOUNT * 3);
+  const speeds = new Float32Array(PCOUNT);
+  const colors = new Float32Array(PCOUNT * 3);
+
+  const emberColor = new THREE.Color(0xff5030);
+  const chromeColor = new THREE.Color(0xd9dde3);
+
+  for (let i = 0; i < PCOUNT; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 7;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 8;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 5;
+    speeds[i] = Math.random() * 0.012 + 0.004;
+    const c = Math.random() > 0.25 ? emberColor : chromeColor;
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+
+  const particleGeo = new THREE.BufferGeometry();
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.09,
+    map: glowTexture,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.9,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+
+  /* ---------------- Interaction: click-to-swing (the scene is otherwise still) ---------------- */
+  let swingImpulse = 0;      // extra rotation velocity applied to the blade
+  let shakeTime = 0;         // remaining camera-shake duration
+  let punchTime = 0;         // remaining camera dolly-punch duration
+  const basePos = camera.position.clone();
+  const restRotation = { x: -0.04, y: 0.16, z: 0.04 }; // still pose the blade holds at rest
+
+  function triggerSwing(clientX, clientY){
+    if (prefersReducedMotion) return;
+    swingImpulse += 6.5;
+    shakeTime = 0.32;
+    punchTime = 0.4;
+
+    // screen flash
+    const flash = document.getElementById('screen-flash');
+    if (flash) {
+      flash.classList.remove('flash');
+      void flash.offsetWidth; // restart animation
+      flash.classList.add('flash');
+    }
+
+    spawnClickBurst(clientX, clientY, true);
+    if (window.__prayasEmberBurst) window.__prayasEmberBurst(clientX, clientY, 40);
+  }
+
+  heroSection.style.cursor = prefersReducedMotion ? 'default' : 'pointer';
+  heroSection.addEventListener('click', (e) => {
+    // ignore clicks on real links/buttons inside the hero content
+    if (e.target.closest('a, button')) return;
+    triggerSwing(e.clientX, e.clientY);
+  });
+
+  /* ---- Resize handling ---- */
+  function onResize(){
+    width = heroSection.clientWidth;
+    height = heroSection.clientHeight;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+  }
+  window.addEventListener('resize', onResize);
+
+  /* ---- Load-in animation state ---- */
+  let introT = 0;
+  const introDuration = prefersReducedMotion ? 0.001 : 1.6; // seconds
+
+  /* ---- Render loop ---- */
+  const clock = new THREE.Clock();
+  let visible = true;
+  document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!visible) return;
+
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const elapsed = clock.elapsedTime;
+
+    if (prefersReducedMotion) {
+      // Show the blade fully formed with only a gentle, non-distracting flicker.
+      bladeGroup.scale.setScalar(1);
+      bladeGroup.rotation.set(0, 0.25, bladeGroup.rotation.z);
+      core.material.emissiveIntensity = 1.9;
+    } else if (!window.__prayasPreloaderDone) {
+      // Stay hidden and idle while the preloader is still on screen.
+      bladeGroup.scale.setScalar(0.001);
+    } else {
+      // intro scale/rotate-in, once, on reveal
+      if (introT < introDuration) {
+        introT += dt;
+        const t = clamp(introT / introDuration, 0, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        bladeGroup.scale.setScalar(0.001 + eased * 0.999);
+        bladeGroup.rotation.y = restRotation.y + (1 - eased) * Math.PI * 1.4;
+        bladeGroup.rotation.x = restRotation.x;
+        bladeGroup.rotation.z = restRotation.z;
+      } else {
+        // The scene is still at rest. A click adds a decaying swing impulse;
+        // with no impulse, the blade eases back to its exact resting pose.
+        if (swingImpulse > 0.001) {
+          bladeGroup.rotation.z += swingImpulse * dt;
+          bladeGroup.rotation.y += swingImpulse * dt * 0.4;
+          swingImpulse = lerp(swingImpulse, 0, 0.08);
+        } else {
+          bladeGroup.rotation.z = lerp(bladeGroup.rotation.z, restRotation.z, 0.08);
+          bladeGroup.rotation.y = lerp(bladeGroup.rotation.y, restRotation.y, 0.08);
+        }
+        bladeGroup.rotation.x = lerp(bladeGroup.rotation.x, restRotation.x, 0.08);
+      }
+
+      // camera shake, decaying (only happens as a result of a click)
+      if (shakeTime > 0) {
+        shakeTime -= dt;
+        const amt = Math.max(shakeTime, 0) * 0.4;
+        camera.position.x = basePos.x + (Math.random() - 0.5) * amt;
+        camera.position.y = basePos.y + (Math.random() - 0.5) * amt;
+      } else {
+        camera.position.x = lerp(camera.position.x, basePos.x, 0.15);
+        camera.position.y = lerp(camera.position.y, basePos.y, 0.15);
+      }
+
+      // camera dolly-punch: a quick push-in that eases back out, only on click
+      if (punchTime > 0) {
+        punchTime -= dt;
+        const p = Math.max(punchTime, 0) / 0.4;
+        const punch = Math.sin(p * Math.PI) * 0.9;
+        camera.position.z = basePos.z - punch;
+      } else {
+        camera.position.z = lerp(camera.position.z, basePos.z, 0.12);
+      }
+
+      // flicker the emissive core / light for a living-flame feel, brighter mid-swing
+      const swingGlow = Math.min(swingImpulse * 0.3, 2.4);
+      const flicker = 1.8 + Math.sin(elapsed * 8) * 0.3 + Math.sin(elapsed * 17) * 0.15 + swingGlow;
+      core.material.emissiveIntensity = flicker;
+      emberLight.intensity = 5 + Math.sin(elapsed * 6) * 1.2 + swingGlow * 2;
+
+      // ambient particles keep drifting gently at all times — this is the
+      // "always alive" layer that continues even while the blade is still
+      const posAttr = particleGeo.attributes.position;
+      for (let i = 0; i < PCOUNT; i++) {
+        let y = posAttr.getY(i) + speeds[i];
+        if (y > 4.2) y = -4.2;
+        posAttr.setY(i, y);
+      }
+      posAttr.needsUpdate = true;
+      particles.rotation.y += 0.0004;
+    }
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+/* ---------------- 7. Contact form (front-end only) ---------------- */
+(function contactForm(){
+  const form = document.getElementById('contact-form');
+  const note = document.getElementById('form-note');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // NOTE: This form has no backend. To receive real messages, connect it
+    // to a service such as Formspree, Getform, or your own API endpoint.
+    note.textContent = "Thanks — this demo form isn't connected to an inbox yet. Wire it up to Formspree or your backend to start receiving messages.";
+    form.reset();
+  });
+})();
