@@ -1,1 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prayas Studio — VFX, Animation &amp; Media</title>
+<meta name="description" content="Prayas Studio is a VFX, animation and media house crafting cinematic visuals, motion design and immersive digital worlds.">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Fixed ember particle field, sits behind everything -->
+<canvas id="ember-field"></canvas>
+
+<!-- Custom cursor -->
+<div id="cursor-glow" aria-hidden="true"></div>
+
+<!-- ============ NAV ============ -->
+<header class="site-header" id="site-header">
+  <div class="header-inner">
+    <a href="#home" class="brand" aria-label="Prayas Studio — home">
+      <span class="brand-badge"><img src="assets/logo.png" alt="Prayas Studio logo" class="brand-logo"></span>
+      <span class="brand-word">
+        <span class="brand-name">Prayas</span>
+        <span class="brand-sub">Studio</span>
+      </span>
+    </a>
+
+    <nav class="main-nav" id="main-nav">
+      <a href="#about">About</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <a href="#contact" class="btn btn-ghost nav-cta">Start a project</a>
+
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ HERO ============ -->
+  <section id="home" class="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-vignette"></div>
+
+    <div class="hero-content">
+      <p class="hero-kicker">VFX &nbsp;·&nbsp; Animation &nbsp;·&nbsp; Media</p>
+      <h1 class="hero-title">
+        <span class="line" data-reveal>We forge stories</span>
+        <span class="line" data-reveal>into <em>motion.</em></span>
+      </h1>
+      <p class="hero-copy">
+        Prayas Studio is a VFX, animation and media house building cinematic
+        visuals, motion design and immersive digital worlds for brands who
+        refuse to be forgettable.
+      </p>
+      <div class="hero-actions">
+        <a href="#work" class="btn btn-primary">See our work</a>
+        <a href="#contact" class="btn btn-outline">Start a project</a>
+      </div>
+    </div>
+
+    <div class="scroll-cue" aria-hidden="true">
+      <span></span>
+      <p>Scroll</p>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="about" class="about">
+    <div class="section-inner about-grid">
+      <div class="about-copy">
+        <p class="section-label">About the studio</p>
+        <h2 class="section-heading" data-reveal>Built on craft,<br>tempered by iteration.</h2>
+        <p class="lead">
+          <strong>Prayas</strong> means effort — and that's exactly how we work.
+          Frame by frame, revision by revision, until a shot earns its place
+          in the final cut.
+        </p>
+        <p>
+          We're a small studio of animators, compositors, and directors who'd
+          rather spend three extra passes on a render than ship something
+          ordinary. Every project moves through the same forge: a rough idea
+          goes in, and something considered, textured and alive comes out.
+        </p>
+
+        <ul class="pillars">
+          <li><span class="pillar-dot"></span><strong>Inspire</strong> — we start from a feeling, not a template.</li>
+          <li><span class="pillar-dot"></span><strong>Design</strong> — every frame is composed on purpose.</li>
+          <li><span class="pillar-dot"></span><strong>Discover</strong> — the best shot is usually the fifth version.</li>
+        </ul>
+      </div>
+
+      <div class="about-visual">
+        <div class="ember-orb" id="about-orb">
+          <div class="orb-core"></div>
+          <div class="orb-ring"></div>
+          <div class="orb-ring orb-ring-2"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section id="services" class="services">
+    <div class="section-inner">
+      <div class="services-head">
+        <p class="section-label">What we do</p>
+        <h2 class="section-heading" data-reveal>Six crafts, one production line.</h2>
+      </div>
+
+      <div class="services-grid">
+        <article class="service-card service-card--wide">
+          <h3>Motion Graphics &amp; Animation</h3>
+          <p>2D and 3D motion design for titles, explainers, brand films and everything that needs to move with intent.</p>
+        </article>
+        <article class="service-card">
+          <h3>VFX &amp; Compositing</h3>
+          <p>Seamless effects work — from clean-up plates to full CG integration that holds up in a 4K grade.</p>
+        </article>
+        <article class="service-card">
+          <h3>3D Modeling &amp; Rendering</h3>
+          <p>Product visualization, environments and characters, built and lit for the screen.</p>
+        </article>
+        <article class="service-card service-card--wide">
+          <h3>Concept Art &amp; Previs</h3>
+          <p>We visualize the shot before a single frame is rendered, so nobody's guessing on set.</p>
+        </article>
+        <article class="service-card">
+          <h3>Color Grading &amp; Finishing</h3>
+          <p>Grading and mastering that gives every frame its final mood, from grounded to graphic.</p>
+        </article>
+        <article class="service-card">
+          <h3>Sound Design &amp; Mix</h3>
+          <p>Original score, sound design and mix — the half of the picture people feel but never see.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WORK ============ -->
+  <section id="work" class="work">
+    <div class="section-inner">
+      <div class="work-head">
+        <p class="section-label">Selected work</p>
+        <h2 class="section-heading" data-reveal>A few things we're proud of.</h2>
+        <p class="work-note">Placeholder projects — swap in your real stills and case studies here.</p>
+      </div>
+
+      <div class="work-grid">
+        <a href="#" class="work-card" style="--tint:#c41e2e;">
+          <div class="work-thumb" data-thumb="1"></div>
+          <div class="work-meta"><h3>Ember &amp; Steel</h3><span>Brand Film</span></div>
+        </a>
+        <a href="#" class="work-card" style="--tint:#8a8e96;">
+          <div class="work-thumb" data-thumb="2"></div>
+          <div class="work-meta"><h3>Nova Protocol</h3><span>Motion Graphics</span></div>
+        </a>
+        <a href="#" class="work-card" style="--tint:#ff3b3b;">
+          <div class="work-thumb" data-thumb="3"></div>
+          <div class="work-meta"><h3>Last Light</h3><span>VFX Short</span></div>
+        </a>
+        <a href="#" class="work-card" style="--tint:#d9dde3;">
+          <div class="work-thumb" data-thumb="4"></div>
+          <div class="work-meta"><h3>Aurelia</h3><span>3D Visualization</span></div>
+        </a>
+        <a href="#" class="work-card" style="--tint:#c41e2e;">
+          <div class="work-thumb" data-thumb="5"></div>
+          <div class="work-meta"><h3>Wraith Runner</h3><span>Concept &amp; Previs</span></div>
+        </a>
+        <a href="#" class="work-card" style="--tint:#8a8e96;">
+          <div class="work-thumb" data-thumb="6"></div>
+          <div class="work-meta"><h3>Signal</h3><span>Explainer Animation</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MARQUEE ============ -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Motion Design</span><span>•</span><span>Compositing</span><span>•</span>
+      <span>Look Development</span><span>•</span><span>Rigging</span><span>•</span>
+      <span>Simulation</span><span>•</span><span>Color Science</span><span>•</span>
+      <span>Previsualization</span><span>•</span><span>Sound Design</span><span>•</span>
+      <span>Motion Design</span><span>•</span><span>Compositing</span><span>•</span>
+      <span>Look Development</span><span>•</span><span>Rigging</span><span>•</span>
+      <span>Simulation</span><span>•</span><span>Color Science</span><span>•</span>
+      <span>Previsualization</span><span>•</span><span>Sound Design</span><span>•</span>
+    </div>
+  </div>
+
+  <!-- ============ CONTACT ============ -->
+  <section id="contact" class="contact">
+    <div class="section-inner contact-grid">
+      <div class="contact-copy">
+        <p class="section-label">Get in touch</p>
+        <h2 class="section-heading" data-reveal>Have a project<br>worth forging?</h2>
+        <p class="lead">
+          Tell us what you're building. We'll reply within two working days
+          with next steps, a rough timeline, and honest feedback.
+        </p>
+
+        <div class="contact-details">
+          <a href="mailto:hello@prayasstudio.com">hello@prayasstudio.com</a>
+          <div class="socials">
+            <a href="#" aria-label="Instagram">Instagram</a>
+            <a href="#" aria-label="Behance">Behance</a>
+            <a href="#" aria-label="LinkedIn">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+
+      <form class="contact-form" id="contact-form">
+        <div class="form-row">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" required autocomplete="name">
+        </div>
+        <div class="form-row">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email">
+        </div>
+        <div class="form-row">
+          <label for="project-type">Project type</label>
+          <select id="project-type" name="project-type">
+            <option>Brand Film</option>
+            <option>VFX</option>
+            <option>Animation</option>
+            <option>3D / CGI</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="4" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary form-submit">Send message</button>
+        <p class="form-note" id="form-note" role="status"></p>
+        <!-- This form is front-end only. Connect it to a backend or a
+             service like Formspree / Getform to actually receive messages. -->
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <a href="#home" class="brand" aria-label="Prayas Studio — home">
+      <span class="brand-badge brand-badge--sm"><img src="assets/logo.png" alt="Prayas Studio logo" class="brand-logo"></span>
+      <span class="brand-word">
+        <span class="brand-name">Prayas</span>
+        <span class="brand-sub">Studio</span>
+      </span>
+    </a>
+
+    <nav class="footer-nav">
+      <a href="#about">About</a>
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <p class="footer-tagline">Inspire &nbsp;•&nbsp; Design &nbsp;•&nbsp; Discover</p>
+  </div>
+  <p class="footer-copy">&copy; 2026 Prayas Studio. All rights reserved.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
