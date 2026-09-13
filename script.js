@@ -13,9 +13,67 @@
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isCoarsePointer = window.matchMedia('(hover: none)').matches;
 
+/* ---------------- Shared state ---------------- */
+window.__prayasPreloaderDone = prefersReducedMotion; // if reduced motion, treat as already done
+
+/* ---------------- 0. Preloader ---------------- */
+(function preloader(){
+  const pre = document.getElementById('preloader');
+  if (!pre) { window.__prayasPreloaderDone = true; return; }
+
+  const hide = () => {
+    pre.classList.add('is-hidden');
+    window.__prayasPreloaderDone = true;
+  };
+
+  const minTime = new Promise(res => setTimeout(res, prefersReducedMotion ? 200 : 1500));
+  const loaded = new Promise(res => {
+    if (document.readyState === 'complete') res();
+    else window.addEventListener('load', res, { once: true });
+  });
+
+  Promise.all([minTime, loaded]).then(hide);
+  // safety fallback in case something hangs
+  setTimeout(hide, 4000);
+})();
+
 /* ---------------- 1. Utilities ---------------- */
 function lerp(a, b, t){ return a + (b - a) * t; }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+function spawnClickBurst(x, y, big){
+  if (prefersReducedMotion) return;
+
+  const ring = document.createElement('div');
+  ring.className = 'click-fx';
+  ring.style.left = x + 'px';
+  ring.style.top = y + 'px';
+  document.body.appendChild(ring);
+  ring.addEventListener('animationend', () => ring.remove());
+
+  if (big) {
+    const outer = document.createElement('div');
+    outer.className = 'click-fx click-fx--outer';
+    outer.style.left = x + 'px';
+    outer.style.top = y + 'px';
+    document.body.appendChild(outer);
+    outer.addEventListener('animationend', () => outer.remove());
+  }
+
+  const count = big ? 14 : 7;
+  for (let i = 0; i < count; i++) {
+    const spark = document.createElement('span');
+    spark.className = 'spark';
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+    const dist = (big ? 70 : 40) + Math.random() * (big ? 50 : 25);
+    spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    spark.style.left = x + 'px';
+    spark.style.top = y + 'px';
+    document.body.appendChild(spark);
+    spark.addEventListener('animationend', () => spark.remove());
+  }
+}
 
 /* ---------------- 2. Header / mobile nav ---------------- */
 (function headerNav(){
@@ -94,13 +152,76 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   targets.forEach(t => io.observe(t));
 })();
 
+/* ---------------- 4b. Global click shockwave (outside the hero) ---------------- */
+(function globalClickFx(){
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.hero')) return; // hero handles its own richer burst
+    spawnClickBurst(e.clientX, e.clientY, false);
+    if (window.__prayasEmberBurst) window.__prayasEmberBurst(e.clientX, e.clientY, 26);
+  });
+})();
+
+/* ---------------- 4c. Magnetic buttons ---------------- */
+(function magneticButtons(){
+  if (isCoarsePointer || prefersReducedMotion) return;
+
+  document.querySelectorAll('.btn').forEach(btn => {
+    const strength = 0.3;
+    let raf = null;
+
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const relX = e.clientX - (rect.left + rect.width / 2);
+      const relY = e.clientY - (rect.top + rect.height / 2);
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        btn.style.transform = `translate(${relX * strength}px, ${relY * strength}px)`;
+      });
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      if (raf) cancelAnimationFrame(raf);
+      btn.style.transform = 'translate(0,0)';
+    });
+  });
+})();
+
+/* ---------------- 4d. 3D tilt cards ---------------- */
+(function tiltCards(){
+  if (isCoarsePointer || prefersReducedMotion) return;
+
+  document.querySelectorAll('.service-card, .work-card').forEach(card => {
+    let raf = null;
+
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width;   // 0..1
+      const py = (e.clientY - rect.top) / rect.height;   // 0..1
+      const rotY = (px - 0.5) * 14;
+      const rotX = (0.5 - py) * 14;
+
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-4px)`;
+        card.style.setProperty('--mx', `${px * 100}%`);
+        card.style.setProperty('--my', `${py * 100}%`);
+      });
+    });
+
+    card.addEventListener('mouseleave', () => {
+      if (raf) cancelAnimationFrame(raf);
+      card.style.transform = '';
+    });
+  });
+})();
+
 /* ---------------- 5. Global ember particle background ---------------- */
 (function emberField(){
   const canvas = document.getElementById('ember-field');
   const ctx = canvas.getContext('2d');
   let w, h, particles, running = true;
 
-  const COUNT = prefersReducedMotion ? 0 : (window.innerWidth < 720 ? 34 : 70);
+  const BASE_COUNT = prefersReducedMotion ? 0 : (window.innerWidth < 720 ? 90 : 190);
 
   function resize(){
     w = canvas.width = window.innerWidth;
@@ -113,37 +234,77 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
     return {
       x: Math.random() * w,
       y: randomY ? Math.random() * h : h + Math.random() * 60,
-      r: Math.random() * 1.8 + 0.4,
-      speed: Math.random() * 0.5 + 0.15,
-      drift: (Math.random() - 0.5) * 0.4,
-      hue: Math.random() > 0.35 ? 'ember' : 'chrome',
-      alpha: Math.random() * 0.5 + 0.25,
-      flicker: Math.random() * Math.PI * 2
+      r: Math.random() * 2.2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: -(Math.random() * 0.5 + 0.15),
+      hue: Math.random() > 0.3 ? 'ember' : 'chrome',
+      alpha: Math.random() * 0.55 + 0.25,
+      flicker: Math.random() * Math.PI * 2,
+      burst: false
     };
   }
 
-  particles = Array.from({ length: COUNT }, () => makeParticle(true));
+  particles = Array.from({ length: BASE_COUNT }, () => makeParticle(true));
+
+  // Called by click handlers anywhere on the page: injects a burst of
+  // fast-moving embers from (x, y) that decay into the normal ambient drift.
+  window.__prayasEmberBurst = function(x, y, count){
+    if (prefersReducedMotion) return;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3.2 + 1.2;
+      particles.push({
+        x, y,
+        r: Math.random() * 2.4 + 0.8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        hue: Math.random() > 0.25 ? 'ember' : 'chrome',
+        alpha: 1,
+        flicker: Math.random() * Math.PI * 2,
+        burst: true
+      });
+    }
+    // keep the array from growing unbounded on rapid clicking
+    if (particles.length > BASE_COUNT + 400) {
+      particles.splice(0, particles.length - (BASE_COUNT + 400));
+    }
+  };
 
   function draw(){
     if (!running) { requestAnimationFrame(draw); return; }
     ctx.clearRect(0, 0, w, h);
 
-    particles.forEach(p => {
-      p.y -= p.speed;
-      p.x += p.drift;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
       p.flicker += 0.05;
-      if (p.y < -10) Object.assign(p, makeParticle(false));
+
+      if (p.burst) {
+        // fast-decaying burst particle: friction slows it, then it drifts up and fades
+        p.vx *= 0.94;
+        p.vy = p.vy * 0.94 - 0.01;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.012;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < -10) Object.assign(p, makeParticle(false));
+      }
 
       const flick = 0.7 + Math.sin(p.flicker) * 0.3;
-      const color = p.hue === 'ember'
-        ? `rgba(255, 70, 70, ${p.alpha * flick})`
-        : `rgba(217, 221, 227, ${p.alpha * flick * 0.6})`;
+      const a = Math.max(p.alpha * flick, 0);
+      const core = p.hue === 'ember' ? '255,90,60' : '217,221,227';
 
+      // soft radial glow instead of a flat dot, for a premium bokeh look
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+      glow.addColorStop(0, `rgba(${core}, ${a})`);
+      glow.addColorStop(1, `rgba(${core}, 0)`);
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.fillStyle = color;
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
       ctx.fill();
-    });
+    }
 
     requestAnimationFrame(draw);
   }
@@ -152,7 +313,7 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
     running = !document.hidden;
   });
 
-  if (COUNT > 0) draw();
+  if (BASE_COUNT > 0 || true) draw(); // keep loop alive so click bursts still render even at 0 ambient particles
 })();
 
 /* ---------------- 6. Hero 3D blade scene (Three.js) ---------------- */
@@ -265,8 +426,24 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   bladeGroup.scale.setScalar(0.001); // start hidden, animated in on load
   scene.add(bladeGroup);
 
+  /* ---- Soft glow sprite texture for premium bokeh-style particles ---- */
+  function makeGlowTexture(){
+    const size = 128;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.7)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  const glowTexture = makeGlowTexture();
+
   /* ---- Ember particles rising around the blade ---- */
-  const PCOUNT = prefersReducedMotion ? 120 : (window.innerWidth < 720 ? 220 : 450);
+  const PCOUNT = prefersReducedMotion ? 140 : (window.innerWidth < 720 ? 380 : 850);
   const positions = new Float32Array(PCOUNT * 3);
   const speeds = new Float32Array(PCOUNT);
   const colors = new Float32Array(PCOUNT * 3);
@@ -288,10 +465,11 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const particleMat = new THREE.PointsMaterial({
-    size: 0.045,
+    size: 0.09,
+    map: glowTexture,
     vertexColors: true,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.9,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
@@ -299,13 +477,36 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
   const particles = new THREE.Points(particleGeo, particleMat);
   scene.add(particles);
 
-  /* ---- Interaction: mouse parallax ---- */
-  let targetRotX = 0, targetRotY = 0;
-  window.addEventListener('mousemove', (e) => {
-    const nx = (e.clientX / window.innerWidth) * 2 - 1;
-    const ny = (e.clientY / window.innerHeight) * 2 - 1;
-    targetRotY = nx * 0.35;
-    targetRotX = ny * 0.18;
+  /* ---------------- Interaction: click-to-swing (the scene is otherwise still) ---------------- */
+  let swingImpulse = 0;      // extra rotation velocity applied to the blade
+  let shakeTime = 0;         // remaining camera-shake duration
+  let punchTime = 0;         // remaining camera dolly-punch duration
+  const basePos = camera.position.clone();
+  const restRotation = { x: -0.04, y: 0.16, z: 0.04 }; // still pose the blade holds at rest
+
+  function triggerSwing(clientX, clientY){
+    if (prefersReducedMotion) return;
+    swingImpulse += 6.5;
+    shakeTime = 0.32;
+    punchTime = 0.4;
+
+    // screen flash
+    const flash = document.getElementById('screen-flash');
+    if (flash) {
+      flash.classList.remove('flash');
+      void flash.offsetWidth; // restart animation
+      flash.classList.add('flash');
+    }
+
+    spawnClickBurst(clientX, clientY, true);
+    if (window.__prayasEmberBurst) window.__prayasEmberBurst(clientX, clientY, 40);
+  }
+
+  heroSection.style.cursor = prefersReducedMotion ? 'default' : 'pointer';
+  heroSection.addEventListener('click', (e) => {
+    // ignore clicks on real links/buttons inside the hero content
+    if (e.target.closest('a, button')) return;
+    triggerSwing(e.clientX, e.clientY);
   });
 
   /* ---- Resize handling ---- */
@@ -339,53 +540,39 @@ function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
       bladeGroup.scale.setScalar(1);
       bladeGroup.rotation.set(0, 0.25, bladeGroup.rotation.z);
       core.material.emissiveIntensity = 1.9;
+    } else if (!window.__prayasPreloaderDone) {
+      // Stay hidden and idle while the preloader is still on screen.
+      bladeGroup.scale.setScalar(0.001);
     } else {
-      // intro scale/rotate-in
+      // intro scale/rotate-in, once, on reveal
       if (introT < introDuration) {
         introT += dt;
         const t = clamp(introT / introDuration, 0, 1);
         const eased = 1 - Math.pow(1 - t, 3);
         bladeGroup.scale.setScalar(0.001 + eased * 0.999);
-        bladeGroup.rotation.y = (1 - eased) * Math.PI * 1.4;
+        bladeGroup.rotation.y = restRotation.y + (1 - eased) * Math.PI * 1.4;
+        bladeGroup.rotation.x = restRotation.x;
+        bladeGroup.rotation.z = restRotation.z;
       } else {
-        bladeGroup.rotation.y = lerp(bladeGroup.rotation.y, targetRotY + Math.sin(elapsed * 0.3) * 0.12, 0.04);
+        // The scene is still at rest. A click adds a decaying swing impulse;
+        // with no impulse, the blade eases back to its exact resting pose.
+        if (swingImpulse > 0.001) {
+          bladeGroup.rotation.z += swingImpulse * dt;
+          bladeGroup.rotation.y += swingImpulse * dt * 0.4;
+          swingImpulse = lerp(swingImpulse, 0, 0.08);
+        } else {
+          bladeGroup.rotation.z = lerp(bladeGroup.rotation.z, restRotation.z, 0.08);
+          bladeGroup.rotation.y = lerp(bladeGroup.rotation.y, restRotation.y, 0.08);
+        }
+        bladeGroup.rotation.x = lerp(bladeGroup.rotation.x, restRotation.x, 0.08);
       }
 
-      bladeGroup.rotation.x = lerp(bladeGroup.rotation.x, targetRotX, 0.04);
-      bladeGroup.position.y = Math.sin(elapsed * 0.6) * 0.15;
-
-      // flicker the emissive core / light for a living-flame feel
-      const flicker = 1.8 + Math.sin(elapsed * 8) * 0.3 + Math.sin(elapsed * 17) * 0.15;
-      core.material.emissiveIntensity = flicker;
-      emberLight.intensity = 5 + Math.sin(elapsed * 6) * 1.2;
-
-      // drift particles upward, wrap around
-      const posAttr = particleGeo.attributes.position;
-      for (let i = 0; i < PCOUNT; i++) {
-        let y = posAttr.getY(i) + speeds[i];
-        if (y > 4.2) y = -4.2;
-        posAttr.setY(i, y);
-      }
-      posAttr.needsUpdate = true;
-      particles.rotation.y += 0.0006;
-    }
-
-    renderer.render(scene, camera);
-  }
-  animate();
-})();
-
-/* ---------------- 7. Contact form (front-end only) ---------------- */
-(function contactForm(){
-  const form = document.getElementById('contact-form');
-  const note = document.getElementById('form-note');
-  if (!form) return;
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // NOTE: This form has no backend. To receive real messages, connect it
-    // to a service such as Formspree, Getform, or your own API endpoint.
-    note.textContent = "Thanks — this demo form isn't connected to an inbox yet. Wire it up to Formspree or your backend to start receiving messages.";
-    form.reset();
-  });
-})();
+      // camera shake, decaying (only happens as a result of a click)
+      if (shakeTime > 0) {
+        shakeTime -= dt;
+        const amt = Math.max(shakeTime, 0) * 0.4;
+        camera.position.x = basePos.x + (Math.random() - 0.5) * amt;
+        camera.position.y = basePos.y + (Math.random() - 0.5) * amt;
+      } else {
+        camera.position.x = lerp(camera.position.x, basePos.x, 0.15);
+        camera.position.y = lerp(camera.position.y, basePos.
